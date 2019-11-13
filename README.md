@@ -56,4 +56,5 @@ This tutorial explains how to train on large datasets:
 
 # Origin
 
-See the original repo: https://github.com/lambdal/TensorFlow2-tutorial
+This repo is my extension of https://github.com/lambdal/TensorFlow2-tutorial
+Appearantly, the origin repo is not maintained.
