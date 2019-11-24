@@ -85,9 +85,15 @@ def train_generator():
   """ Generator for training samples.
   We should use yield when we want to iterate over a sequence, but don't want to store the entire sequence in memory.
   """
-  for image_path, label in zip(train_images_path, train_labels):
-      X = np.array(resize(imread(image_path), (HEIGHT, WIDTH)))
-      y = label
+
+  # Shuffling train dataset is good practice if it is easy to shuffle.
+  # In our case, it is easy since we just shuffle indices.
+  indices = np.arange(len(train_images_path))
+  np.random.shuffle(indices)
+  
+  for i in indices:
+      X = np.array(resize(imread(train_images_path[i]), (HEIGHT, WIDTH)))
+      y = train_labels[i]
       
       yield X, y
           
@@ -114,7 +120,10 @@ test_dataset = tf.data.Dataset.from_generator(generator = test_generator,
 
 
 # Preprocess data.
-train_dataset = train_dataset.shuffle(NUM_TRAIN_SAMPLES).map(preprocess_train).batch(BS_PER_GPU, drop_remainder=True)
+# For large datasets shuffle buffer size should be small, since the whole dataset will be loaded into the memory for shuffling.
+# Make sure you already apply shuffle in generator function.
+SHUFFLE_BUFFER_SIZE = BS_PER_GPU*5
+train_dataset = train_dataset.shuffle(buffer_size=SHUFFLE_BUFFER_SIZE).map(preprocess_train).batch(BS_PER_GPU, drop_remainder=True)
 test_dataset = test_dataset.map(preprocess_eval).batch(BS_PER_GPU, drop_remainder=True)
 
 
@@ -124,22 +133,15 @@ input_shape = (HEIGHT, WIDTH, 3)
 img_input = tf.keras.layers.Input(shape=input_shape)
 opt = tf.keras.optimizers.SGD()
 
-# Restore from the disk or use existing ResNet50.
-if FLAG_RESTORE_FROM_DISK:
-  backbone = tf.keras.models.load_model('ResNet50.h5')
 
-  # Backbone is not trainable.
-  backbone.trainable = False
-  x = backbone.layers[-3].output	
 
-else:
-  # Use the avaliable model in Keras but dont get top layer.
-  # Since the top layer is classification layer.
-  backbone = tf.keras.applications.ResNet50(weights = "imagenet", include_top=False, input_shape = (WIDTH, HEIGHT, NUM_CHANNELS))
+# Use the avaliable model in Keras but dont get top layer.
+# Since the top layer is classification layer.
+backbone = tf.keras.applications.ResNet50(weights = "imagenet", include_top=False, input_shape = (WIDTH, HEIGHT, NUM_CHANNELS))
 
-  # Backbone is not trainable.
-  backbone.trainable = False
-  x = backbone.output
+# Backbone is not trainable.
+backbone.trainable = False
+x = backbone.output
 
 # Add custom layers.
 x = tf.keras.layers.GlobalAveragePooling2D(name='avg_pool')(x)
