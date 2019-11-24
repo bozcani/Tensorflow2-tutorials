@@ -20,7 +20,7 @@ python train_on_large_dataset.py
   
   
 
-## Use Checkpoint
+## Generators to Handle Large Datasets
 
   
 
